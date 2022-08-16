@@ -9,7 +9,8 @@ class XMLComment:
     def __init__(self,comment,statement):
         self.comment = comment
         self.parsed_comment = None
-        self.summary = None
+        self.summary_comment = None
+        self.param_comments = []
         self.parse_comment()
 
         self.statement = statement
@@ -34,7 +35,9 @@ class XMLComment:
         self.parsed_comment = '\\'.join(self.parsed_comment) # markdown new line
         self.parsed_comment = BeautifulSoup(self.parsed_comment)
         
-        self.summary = self.parsed_comment.summary.text
+        self.summary_comment = self.parsed_comment.summary.text if self.parsed_comment.summary is not None else ''
+        for comment in self.parsed_comment.find_all('param'):
+            self.param_comments.append((comment["name"],comment.next))
 
     def get_markdown():
         pass
@@ -119,38 +122,56 @@ def determine_prop_type(statement):
         return XMLComment_Function
     return XMLComment_Variable
 
-def extract_comments(filepath):
-    comments = []
-    class_found = False
-    with open(filepath) as f: 
-        current_comment = None
-        for line in f:
-            line = line.strip()
-            # comment detected
-            if line.startswith("///"):
-                current_comment = current_comment + line if current_comment is not None else line
-            else:
-                # comment finished
-                if current_comment is not None:
-                    if line == '': continue
-                    if line.startswith('['): continue # ignore serialization etc.
-                    
-                    # determine which type of parser to use for the property
-                    prop_type = determine_prop_type(line)
+class File_Comments:
+    def __init__(self,file_path):
+        self.file_path = file_path
 
-                    # handle class within classes
-                    if prop_type == XMLComment_Class:
-                        if class_found:
+        self.comments = []
+        self.main_class_comment = None
+        self.get_comments()
+        
+        self.markdown = None
+        self.get_markdown()
+
+
+    def get_markdown(self):
+        pass
+
+    def get_comments(self):
+        self.comments = []
+        with open(self.file_path) as f: 
+            current_comment = None
+            for line in f:
+                line = line.strip()
+                # comment detected
+                if line.startswith("///"):
+                    if current_comment is None:
+                        if '<' in line and '>' in line:
+                            current_comment = line
+                    else:
+                        current_comment += line
+                else:
+                    # comment finished
+                    if current_comment is not None:
+                        if line == '': continue
+                        if line.startswith('['): continue # ignore serialization etc.
+                        
+                        # determine which type of parser to use for the property
+                        prop_type = determine_prop_type(line)
+
+                        # handle class within classes
+                        if prop_type == XMLComment_Class and self.main_class_comment is not None:
                             prop_type = XMLComment_SubClass
+
+                        # create the comment object
+                        prop_comment = prop_type(current_comment,line)
+
+                        # set the main class comment or add class comment to buff
+                        if prop_type == XMLComment_Class:
+                            self.main_class_comment = prop_comment
                         else:
-                            class_found = True
-
-                    prop_comment = prop_type(current_comment,line)
-                    comments.append(prop_comment)
-                    current_comment = None
-
-    return comments
-
+                            self.comments.append(prop_comment)
+                        current_comment = None
 
 file_path = filedialog.askdirectory()
 # output_directory = filedialog.askdirectory()
@@ -161,7 +182,6 @@ for root, dirs, files in os.walk(file_path):
     for file in files:
         if file.endswith(extension):
             full_path = os.path.join(root,file)
-            comments = extract_comments(full_path)
-            file_comments.append((full_path,comments))
+            file_comments.append(File_Comments(full_path))
 
 print(file_comments)
