@@ -291,6 +291,17 @@ class File_Comments:
                             self.comments.append(prop_comment)
                         current_comment = None
 
+class Index:
+    def __init__(self,file_comments):
+        self.files_comments = file_comments
+        self.markdown = None
+        self.get_markdown()
+
+    def get_markdown(self):
+        links = map(lambda file_comment: f"* [{file_comment.file}](./{file_comment.file}) *{file_comment.file_path}*",self.files_comments)
+        self.markdown = f"""## Scripts
+{md_new_line.join(links)}
+        """
 
 # get the path for where code files exist
 file_path = filedialog.askdirectory()
@@ -318,6 +329,13 @@ for file_comment in file_comments:
         with open(os.path.join(output_directory, file_comment.file + ".md"), "w") as file:
             file.write(file_comment.markdown)
             file.close()
+
+# save the index file
+index = Index(file_comments)
+if index.markdown is not None:
+    with open(os.path.join(output_directory, "Developer-Docs.md"), "w") as file:
+        file.write(index.markdown)
+        file.close()
 
 # open the export directory
 if os.path.isdir(output_directory):
