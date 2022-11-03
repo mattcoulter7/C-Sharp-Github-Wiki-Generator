@@ -303,40 +303,45 @@ class Index:
 {md_new_line.join(links)}
         """
 
-# get the path for where code files exist
-file_path = filedialog.askdirectory()
-extension = ".cs"
 
-# parse and extract the comments
-file_comments = []
-for root, dirs, files in os.walk(file_path):
-    for file in files:
-        if file.endswith(extension):
-            full_path = os.path.join(root, file)
-            file_comments.append(File_Comments(file, full_path))
+def main():
+    # get the path for where code files exist
+    file_path = filedialog.askdirectory()
+    extension = ".cs"
 
-# get the output directory
-folder_name = uuid.uuid4()
-output_directory = os.path.join(os.getcwd(), "exports", str(folder_name))
+    # parse and extract the comments
+    file_comments = []
+    for root, dirs, files in os.walk(file_path):
+        for file in files:
+            if file.endswith(extension):
+                full_path = os.path.join(root, file)
+                file_comments.append(File_Comments(file, full_path))
 
-# ensure output directory exists
-if not os.path.exists(output_directory):
-    os.makedirs(output_directory)
+    # get the output directory
+    folder_name = uuid.uuid4()
+    output_directory = os.path.join(os.getcwd(), "exports", str(folder_name))
 
-# write the files
-for file_comment in file_comments:
-    if file_comment.markdown is not None:
-        with open(os.path.join(output_directory, file_comment.file + ".md"), "w") as file:
-            file.write(file_comment.markdown)
+    # ensure output directory exists
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
+    # write the files
+    for file_comment in file_comments:
+        if file_comment.markdown is not None:
+            with open(os.path.join(output_directory, file_comment.file + ".md"), "w") as file:
+                file.write(file_comment.markdown)
+                file.close()
+
+    # save the index file
+    index = Index(file_comments)
+    if index.markdown is not None:
+        with open(os.path.join(output_directory, "Developer-Docs.md"), "w") as file:
+            file.write(index.markdown)
             file.close()
 
-# save the index file
-index = Index(file_comments)
-if index.markdown is not None:
-    with open(os.path.join(output_directory, "Developer-Docs.md"), "w") as file:
-        file.write(index.markdown)
-        file.close()
+    # open the export directory
+    if os.path.isdir(output_directory):
+        subprocess.run([FILEBROWSER_PATH, output_directory])
 
-# open the export directory
-if os.path.isdir(output_directory):
-    subprocess.run([FILEBROWSER_PATH, output_directory])
+if __name__ == '__main__':
+    main()
